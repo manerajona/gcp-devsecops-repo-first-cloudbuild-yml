@@ -1,3 +1,18 @@
 steps:
-  - name: 'ubuntu'
-    args: ['echo','Hello Jonathan!! This is our first build run in Google Cloud Platform']
+  - name: 'maven:3-openjdk-18-slim'
+    entrypoint: bash
+    args:
+      - '-c'
+      - |
+        mvn verify sonar:sonar \
+          -Dsonar.host.url=https://sonarcloud.io \
+          -Dsonar.organization=codada \
+          -Dsonar.projectKey=codada_gcp-devsecops-repo \
+          -Dsonar.token=$$SONAR_TOKEN
+    secretEnv:
+      - 'SONAR_TOKEN'
+
+availableSecrets:
+  secretManager:
+    - versionName: 'projects/$PROJECT_ID/secrets/cloudbuild-sonar-token/versions/latest'
+      env: 'SONAR_TOKEN'
