@@ -1,6 +1,7 @@
 steps:
+  # Run SAST Scan using SonarCloud
   - name: 'maven:3-openjdk-18-slim'
-    id: SonarCloud
+    id: SonarCloud SAST
     entrypoint: bash
     args:
       - '-c'
@@ -12,9 +13,9 @@ steps:
           -Dsonar.token=$$SONAR_TOKEN
     secretEnv:
       - 'SONAR_TOKEN'
-
+  # Run SCA scan using Snyk
   - name: 'maven:3-openjdk-18-slim'
-    id: SnykSCA
+    id: Snyk SCA
     entrypoint: bash
     args:
       - '-c'
@@ -23,6 +24,30 @@ steps:
         mvn snyk:test -fn
     secretEnv:
       - 'SNYK_TOKEN'
+  # Run DAST scan using OWASP ZAP
+  - name: 'gcr.io/cloud-builders/docker'
+    id: OWASP-ZAP DAST
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        docker run --user root --rm \
+          -v $(pwd)/zap:/zap/wrk \
+          -w /zap/wrk \
+          ghcr.io/zaproxy/zaproxy:stable \
+          zap-baseline.py \
+          -t ${_TARGET_URL} \
+          -r scanreport.html \
+          -x scanreport.xml \
+          -J scanreport.json \
+          -I
+substitutions:
+  _TARGET_URL: https://www.example.com
+artifacts:
+  objects:
+    location: 'gs://gcp-devsecops-reports'
+    paths:
+      - zap/scanreport.*
 
 availableSecrets:
   secretManager:
